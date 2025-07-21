@@ -4,8 +4,85 @@ import time
 
 '''
 SYNOPSIS
-     Functions to capture still images with specifiable attributes. including output encoding, dimension, buffer count, etc. 
+    Functions to capture still images with specifiable attributes, including output encoding, dimension, buffer count, etc. 
 '''
 
-# def camera_test
-def capture_atill(enc=jpg, w=2592, h=1944, buf=0, flush=False, debug=False)
+# Configure camera
+def config_still(picam2, format='opencv', w=800, h=600, buf=4):
+    if format == 'opencv':
+        color = 'RGB888'
+    elif format == 'alpha-opencv':
+        color = 'XRGB8888'
+    else:
+        print(f"Unexpected format: {format}\nTry 'opencv' or 'alpha-opencv'")
+
+    config = picam2.create_still_configuration(
+        buffer_count=buf,
+        main={"format": color, "size": (w, h)}
+    )
+    picam2.configure(config)
+    print("Camera configured.")
+
+# Capture an image on key press
+def capture_on_key(picam2, w, h):
+    match w - h:
+        case 160:
+            size_str = 'vga'
+        case 200:
+            size_str = 'svga'
+        case 648:
+            size_str = 'full'
+        case _:
+            size_str = f"{w}x{h}"
+    n = -1
+    while True:
+        if input('Waiting for capture signal (L)... ').upper() == 'L' :
+            n = n + 1
+            filename_jpg = f"img_{size_str}_{n:04d}.jpg"
+
+            picam2.capture_file(filename_jpg)
+            print("Capture complete.")
+        else:
+            break
+
+# Capture an image once every specifiable period
+def capture_on_period(picam2, w, h, t=5000):
+    match w - h:
+        case 160:
+            size_str = 'vga'
+        case 200:
+            size_str = 'svga'
+        case 648:
+            size_str = 'full'
+        case _:
+            size_str = f"{w}x{h}"
+    n = -1
+    try:
+        while True:
+            n = n + 1
+            filename_jpg = f"img_{size_str}_{n:04d}.jpg"
+
+            picam2.capture_file(filename_jpg)
+            print("Capture complete.\n")
+            print("Preparing to capture...")
+            time.sleep(t / 1000)
+    except KeyboardInterrupt:
+        print(f": Number of images captured: {n + 1}.\nExiting...")
+
+if __name__ == "__main__":
+    picam2 = Picamera2()
+    w = 2592
+    h = 1944
+    t = 5000
+    buf = 4
+
+    config_still(picam2, format='opencv', w=w, h=h, buf=buf)
+
+    picam2.start()
+    print("Camera started. Give it a moment to adjust...")
+    time.sleep(2)
+
+    # capture_on_key(picam2, w, h)
+    capture_on_period(picam2, w, h, t=t)
+
+    picam2.close()
