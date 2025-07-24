@@ -18,9 +18,12 @@ if __name__ == '__main__':
     parser.add_argument('-H', '--height', type=int, default=1944, help="Height of the captured image.")
     parser.add_argument('-t', '--period', type=int, default=5000, help="Time between captures in milliseconds.")
     parser.add_argument('-b', '--buffer', type=int, default=4, help="Camera buffer count.")
-
+    parser.add_argument('-d', '--debug', type=int, default=0, help="Debug level. [0: no debug, 1: debug_picam, 2: debug_all]")
+    
     args = parser.parse_args()
-
+    
+    # Debug level
+    debug = args.debug
 
     ## START OF Camera Mode ##################
     picam2 = Picamera2()
@@ -37,16 +40,22 @@ if __name__ == '__main__':
     size_str = ''
 
     # Capture background once
+    bg_model = ''
     while True:
         ans = input("Capture new background image? [Y/n] ")
         if ans.upper() == 'N':
+            size_str = input("Please specify the size of background: [vga/svga/full/w?xh?] ")
+            bg_model = f"./img_{size_str}_bg.jpg"
             break
         elif ans.upper() == 'Y':
             bg_model = put.capture_once(picam2, w=args.width, h=args.height, bg=True)
+            break
+    if debug >= 1:
+        print(f"\n  DEBUG: Path to background model: {bg_model}")
 
     # Capture fluorescence images on period
     while True:
-        ans = input(f"Start capture on period (t = {args.period})? [Y/n] ")
+        ans = input(f"Start capture on period (t = {args.period} ms)? [Y/n] ")
         if ans.upper() == 'Y':    
             n, size_str = put.capture_on_period(picam2, args.width, args.height, t=args.period)
             picam2.close()
@@ -76,12 +85,15 @@ if __name__ == '__main__':
 
     # Foreground fluorescence analysis (using manually-adjusted section divisions)
     if n == -1:
-        n = input("Enter the number of images to analyse: ")
-        size_str = input("Enter the size of these images: [vga/svga/full/w?xh?]")
+        n = int(input("Enter the number of images to analyse: "))
+    if debug == 2:
+        print(f"\n  DEBUG: Number of images previously captured to analyse: {n}")
 
     max_list = np.zeros(n)
     for i in range(0, n):
-        fluo = cv.imread(f"from-esp/img_{size_str}_{i:04d}.jpg")
+        fluo = cv.imread(f"./img_{size_str}_{i:04d}.jpg")
+        if debug == 2:
+            print(f"\n  DEBUG: Path to read image: ./img_{size_str}_{i:04d}.jpg")
         fluo_g = cv.cvtColor(fluo, cv.COLOR_BGR2GRAY)
         suback_fluog = ut.subtract_background(fluo_g, back_gray)
         avg, max_val, min_val = ut.pixel_average_analysis(suback_fluog, section_rows=6, section_cols=8, verbose=False, figure=False)
@@ -90,7 +102,13 @@ if __name__ == '__main__':
         max_list[i] = max_val
     
     ## END OF Analysis Mode ##################
+    
+    if debug == 2:
+        print(f"\n  DEBUG: max_list of length {np.shape(max_list)[0]}: ")
+        for a in enumerate(max_list):
+            print(f"  {a}")
 
+    print('\n')
     print(f"Min: {min(max_list):.2f}")
     print(f"Max: {max(max_list):.2f}")
     print(f"Range: {max(max_list) - min(max_list):.2f}")

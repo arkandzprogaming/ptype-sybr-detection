@@ -106,7 +106,14 @@ if __name__ == "__main__":
     print("Camera started. Give it a moment to adjust...")
     time.sleep(2)
 
-    # capture_on_key(picam2, w, h)
-    capture_on_period(picam2, w, h, t=t)
+    ans = input("Specify type of test: [once/onkey/period] ")
+    if ans == "once":
+        capture_once(picam2, w, h)
+    elif ans == "onkey":
+        capture_on_key(picam2, w, h)
+    elif ans == "period":
+        capture_on_period(picam2, w, h, t=t)
+    else:
+        print(f"Error. No choice {ans} is available.")
 
     picam2.close()
