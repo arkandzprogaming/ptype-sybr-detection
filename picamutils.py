@@ -90,7 +90,7 @@ def capture_once(picam2, w, h, bg=False):
     picam2.capture_file(filename_jpg)
     print("Capture complete.\n")
 
-    return filename_jpg
+    return filename_jpg, size_str
 
 
 if __name__ == "__main__":

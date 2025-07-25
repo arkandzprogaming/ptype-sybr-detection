@@ -48,7 +48,7 @@ if __name__ == '__main__':
             bg_model = f"./img_{size_str}_bg.jpg"
             break
         elif ans.upper() == 'Y':
-            bg_model = put.capture_once(picam2, w=args.width, h=args.height, bg=True)
+            bg_model, size_str = put.capture_once(picam2, w=args.width, h=args.height, bg=True)
             break
     if debug >= 1:
         print(f"\n  DEBUG: Path to background model: {bg_model}")
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     while True:
         ans = input(f"Start capture on period (t = {args.period} ms)? [Y/n] ")
         if ans.upper() == 'Y':    
-            n, size_str = put.capture_on_period(picam2, args.width, args.height, t=args.period)
+            n, _ = put.capture_on_period(picam2, args.width, args.height, t=args.period)
             picam2.close()
             print("Camera closed. All images saved to disk.\n")
             break
