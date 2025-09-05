@@ -19,12 +19,13 @@ def config_still(picam2, format='opencv', w=800, h=600, buf=4):
     config = picam2.create_still_configuration(
         buffer_count=buf,
         main={"format": color, "size": (w, h)}
+        ,controls={"AwbMode": 5}
     )
     picam2.configure(config)
     print("Camera configured.")
 
 # Capture an image on key press
-def capture_on_key(picam2, w, h):
+def capture_on_key(picam2, w, h, control=False):
     match w - h:
         case 160:
             size_str = 'vga'
@@ -37,9 +38,15 @@ def capture_on_key(picam2, w, h):
     n = -1
     while True:
         if input('Waiting for capture signal (L)... ').upper() == 'L' :
+            if control:
+                with picam2.controls as controls:
+                    #controls.ExposureTime = int(input("ExposureTime: [default 20000] "))
+                    #controls.AnalogueGain = int(input("AnalogueGain: [default 1.0] "))
+                    #controls.AwbEnable = bool(input("AwbEnable: "))
+                    controls.AwbMode = int(input("AwbMode: [default Auto]"))
+
             n = n + 1
             filename_jpg = f"img_{size_str}_{n:04d}.jpg"
-
             picam2.capture_file(filename_jpg)
             print("Capture complete.")
         else:
@@ -97,11 +104,10 @@ if __name__ == "__main__":
     picam2 = Picamera2()
     w = 2592
     h = 1944
-    t = 5000
+    t = 15000
     buf = 4
 
     config_still(picam2, format='opencv', w=w, h=h, buf=buf)
-
     picam2.start()
     print("Camera started. Give it a moment to adjust...")
     time.sleep(2)
@@ -110,7 +116,7 @@ if __name__ == "__main__":
     if ans == "once":
         capture_once(picam2, w, h)
     elif ans == "onkey":
-        capture_on_key(picam2, w, h)
+        capture_on_key(picam2, w, h, control=True)
     elif ans == "period":
         capture_on_period(picam2, w, h, t=t)
     else:

@@ -245,12 +245,14 @@ def pixel_roi_analysis(gray, x, y, w, h, subset=1, verbose=True, figure=True):
 
 
 if __name__ == '__main__':
-    fluo1 = cv.imread('./test_utils/test_img.jpg')
+    # fluo1 = cv.imread('./test_utils/test_img.jpg')
+    # background_model = cv.imread('./test_utils/test_bg.jpg')
+    fluo1 = cv.imread('./img_full_0029.jpg')
     fluo1g = cv.cvtColor(fluo1, cv.COLOR_BGR2GRAY)
-    background_model = cv.imread('./test_utils/test_bg.jpg')
+    background_model = cv.imread('./27072025/img_full_bg.jpg')
     back_gray = cv.cvtColor(background_model, cv.COLOR_BGR2GRAY)
     suback_fluog1 = subtract_background(fluo1g, back_gray)
-    avg1g, max1g, min1g = pixel_average_analysis(suback_fluog1, section_rows=6, section_cols=8, verbose=True, figure=False)
-
+    avg1g, max1g, min1g = pixel_average_analysis(suback_fluog1, section_rows=12, section_cols=16, verbose=True, figure=True)
+    
     # print(f"Maximum intensity region: {max1g}")
     # print(f"Minimum intensity region: {min1g}")

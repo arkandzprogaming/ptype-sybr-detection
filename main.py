@@ -1,6 +1,7 @@
 import sys
 import argparse
 import numpy as np
+import matplotlib.pyplot as plt
 
 from picamera2 import Picamera2
 import time
@@ -19,6 +20,8 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--period', type=int, default=5000, help="Time between captures in milliseconds.")
     parser.add_argument('-b', '--buffer', type=int, default=4, help="Camera buffer count.")
     parser.add_argument('-d', '--debug', type=int, default=0, help="Debug level. [0: no debug, 1: debug_picam, 2: debug_all]")
+    parser.add_argument('-f', '--figure', action="store_true", help="Option to render visual graphics of analysis. Does not take any value.")
+    
     
     args = parser.parse_args()
     
@@ -30,7 +33,7 @@ if __name__ == '__main__':
 
     print("Entering Camera Mode...")
     put.config_still(picam2, format='opencv', w=args.width, h=args.height, buf=args.buffer)
-
+    
     picam2.start()
     print("Camera started. CAUTION: Camera Module v1.3 does not support autofocus.")
     time.sleep(2)
@@ -38,6 +41,8 @@ if __name__ == '__main__':
     # Variables for capture_on_period
     n = -1
     size_str = ''
+    imgdir_path = '.'
+    bg_path = '.'
 
     # Capture background once
     bg_model = ''
@@ -45,13 +50,13 @@ if __name__ == '__main__':
         ans = input("Capture new background image? [Y/n] ")
         if ans.upper() == 'N':
             size_str = input("Please specify the size of background: [vga/svga/full/w?xh?] ")
-            bg_model = f"./img_{size_str}_bg.jpg"
+            bg_path = input("Please specify path to background image directory: ")
+            bg_model = f"{bg_path}/img_{size_str}_bg.jpg"
             break
         elif ans.upper() == 'Y':
             bg_model, size_str = put.capture_once(picam2, w=args.width, h=args.height, bg=True)
+            bg_model = f"{bg_path}/img_{size_str}_bg.jpg"
             break
-    if debug >= 1:
-        print(f"\n  DEBUG: Path to background model: {bg_model}")
 
     # Capture fluorescence images on period
     while True:
@@ -63,8 +68,13 @@ if __name__ == '__main__':
             break
         elif ans.upper() == 'N':
             picam2.close()
+            imgdir_path = input("Please specify the path to the image-containing directory: ")
             print("Camera closed. No new images saved to disk.\n")
             break
+
+    if debug >= 1:
+        print(f"\n  DEBUG: Path to the images directory: {imgdir_path}/*")
+        print(f"  DEBUG: Path to background model: {bg_model}")
 
     # Prompt to enter analysis mode
     while True:
@@ -79,6 +89,7 @@ if __name__ == '__main__':
 
     
     ## START OF Analysis Mode ################
+    print("Entering Analysis Mode...")
     # Background model
     background_model = cv.imread(bg_model)
     back_gray = cv.cvtColor(background_model, cv.COLOR_BGR2GRAY)
@@ -89,17 +100,19 @@ if __name__ == '__main__':
     if debug == 2:
         print(f"\n  DEBUG: Number of images previously captured to analyse: {n}")
 
+    start_analysis = time.time()
     max_list = np.zeros(n)
     for i in range(0, n):
-        fluo = cv.imread(f"./img_{size_str}_{i:04d}.jpg")
+        fluo = cv.imread(f"{imgdir_path}/img_{size_str}_{i:04d}.jpg")
         if debug == 2:
-            print(f"\n  DEBUG: Path to read image: ./img_{size_str}_{i:04d}.jpg")
+            print(f"\n  DEBUG: Path to read image: {imgdir_path}/img_{size_str}_{i:04d}.jpg")
         fluo_g = cv.cvtColor(fluo, cv.COLOR_BGR2GRAY)
         suback_fluog = ut.subtract_background(fluo_g, back_gray)
-        avg, max_val, min_val = ut.pixel_average_analysis(suback_fluog, section_rows=6, section_cols=8, verbose=False, figure=False)
+        avg, max_val, min_val = ut.pixel_average_analysis(suback_fluog, section_rows=12, section_cols=16, verbose=False, figure=False)
         print(f"Image {i}: Average: {avg:.2f}, Max: {max_val:.2f}, Min: {min_val:.2f}")
 
         max_list[i] = max_val
+    finish_analysis = time.time()
     
     ## END OF Analysis Mode ##################
     
@@ -109,6 +122,25 @@ if __name__ == '__main__':
             print(f"  {a}")
 
     print('\n')
-    print(f"Min: {min(max_list):.2f}")
-    print(f"Max: {max(max_list):.2f}")
-    print(f"Range: {max(max_list) - min(max_list):.2f}")
+    print(f"Analysis is done in {finish_analysis - start_analysis:.2f} seconds.")
+    print(f"  Min: {min(max_list):.2f}")
+    print(f"  Max: {max(max_list):.2f}")
+    print(f"  Range: {max(max_list) - min(max_list):.2f}")
+
+    figure = args.figure
+    if figure:
+        plt.figure(figsize=(12, 6))
+
+        image_numbers = list(range(1, len(max_list) + 1))
+
+        plt.plot(image_numbers, max_list, 'b-o', linewidth=2, markersize=4)
+        plt.xlabel('Image Number (Time Sequence)')
+        plt.ylabel('Maximum Fluorescence Intensity (8-bit)')
+        plt.title('Fluorescence Intensity Over Time')
+        plt.grid(True, alpha=0.3)
+
+        # plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+    print("Exiting program...")
