@@ -19,7 +19,7 @@ def config_still(picam2, format='opencv', w=800, h=600, buf=4):
     config = picam2.create_still_configuration(
         buffer_count=buf,
         main={"format": color, "size": (w, h)}
-        ,controls={"AwbMode": 5}
+        ,controls={"AwbEnable": True, "AwbMode": 0}
     )
     picam2.configure(config)
     print("Camera configured.")
@@ -42,8 +42,10 @@ def capture_on_key(picam2, w, h, control=False):
                 with picam2.controls as controls:
                     #controls.ExposureTime = int(input("ExposureTime: [default 20000] "))
                     #controls.AnalogueGain = int(input("AnalogueGain: [default 1.0] "))
-                    #controls.AwbEnable = bool(input("AwbEnable: "))
-                    controls.AwbMode = int(input("AwbMode: [default Auto]"))
+                    controls.AwbEnable = bool(input("AwbEnable: [default True] "))
+                    if controls.AwbEnable:
+                        controls.AwbMode = int(input("AwbMode: [default 0 (Auto)] "))
+                time.sleep(1.5)
 
             n = n + 1
             filename_jpg = f"img_{size_str}_{n:04d}.jpg"
@@ -79,7 +81,7 @@ def capture_on_period(picam2, w, h, t=5000):
     return n + 1, size_str
 
 # Capture image once
-def capture_once(picam2, w, h, bg=False):
+def capture_once(picam2, w, h, control=False, bg=False):
     match w - h:
         case 160:
             size_str = 'vga'
@@ -94,6 +96,14 @@ def capture_once(picam2, w, h, bg=False):
     else:
         filename_jpg = f"./img_{size_str}_once.jpg"
 
+    if control:
+        with picam2.controls as controls:
+            # controls.AwbMode = int(input("AwbMode: [default 0 (Auto)] "))
+            controls.AwbEnable = bool(input("AwbEnable: [default True] "))
+            if controls.AwbEnable:
+                controls.AwbMode = int(input("AwbMode: [default 0 (Auto)] "))
+
+    time.sleep(1.5)
     picam2.capture_file(filename_jpg)
     print("Capture complete.\n")
 
@@ -114,7 +124,8 @@ if __name__ == "__main__":
 
     ans = input("Specify type of test: [once/onkey/period] ")
     if ans == "once":
-        capture_once(picam2, w, h)
+        sceneType = bool(input("Background? [Press Enter if false] "))
+        capture_once(picam2, w, h, control=True, bg = sceneType)
     elif ans == "onkey":
         capture_on_key(picam2, w, h, control=True)
     elif ans == "period":
